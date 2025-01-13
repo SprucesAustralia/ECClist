@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ECC - AI-Powered Cleaning Checklist</title>
+
+  <!-- 
+    =========================================
+    Eastern Culinary Collective (ECC) 
+    Single-Page HTML, CSS, and JavaScript 
+    for an AI-Powered Cleaning Checklist
+    Facility Type: Restaurant
+    =========================================
+
+    NOTES:
+    1) This file is intended to be a single-page, 
+       brand-aligned solution that you can host statically.
+    2) The color scheme and font are inspired by the 
+       provided branding image (dark wood, black, white, 
+       and pops of color from the sashimi - e.g., salmon-pink,
+       soft orange, etc.). Adjust as needed.
+    3) The brand name is "ECC," styled similarly to the 
+       provided website reference image.
+    4) The form will submit to Formspree using 
+       https://formspree.io/f/xeoovlzy (you can adjust 
+       the ID if needed).
+    5) The logic to limit submissions and disallow photo 
+       uploads on the free tier is partly conceptual 
+       (client-side JavaScript) since actual server-side 
+       validation might require more advanced integration. 
+    6) Carefully review the inline comments to modify 
+       colors, tasks, texts, and other behaviors.
+    7) This code is written to “load fast” by avoiding 
+       large external frameworks, using minimal inline 
+       styling and a small JavaScript portion.
+  -->
+
+  <style>
+    /* ===============================
+       BRAND & PAGE-WIDE STYLES
+       =============================== */
+
+    /* 
+      COLOR VARIABLES:
+      Adjust these to match your branding exactly.
+      Taken from the sample image (dark tones, 
+      wood-inspired browns, black, plus a salmon-like accent).
+    */
+    :root {
+      --primary-bg: #2B2B2B;           /* Dark background (e.g., blackish) */
+      --primary-text: #FFFFFF;         /* White text */
+      --accent-color: #FA8072;         /* Salmon-pink accent */
+      --secondary-bg: #3A3A3A;         /* Slightly lighter dark grey */
+      --wood-brown: #8B5738;          /* Could be used as an accent or heading color */
+      --ai-purple-start: #5433FF;      /* For AI note gradient start (example) */
+      --ai-purple-end: #A426FF;        /* For AI note gradient end (example) */
+      --danger-color: #C0392B;         /* For "X" or remove button */
+      --success-color: #27AE60;        /* For check marks or success color */
+    }
+
+    /* Global reset / simple base */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--primary-bg);
+      color: var(--primary-text);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; /* Use a clean sans-serif as a base */
+      line-height: 1.4;
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
+
+    /* Container for overall content */
+    .container {
+      width: 90%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1rem;
+      position: relative;
+    }
+
+    /* ===============================
+       HEADER & BRANDING
+       =============================== */
+    header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    header h1 {
+      /* This is your brand name "ECC" from the reference image */
+      font-size: 2.5rem;
+      margin: 0.5rem 0;
+      letter-spacing: 0.1rem;
+      color: var(--accent-color);
+    }
+    .tagline {
+      font-size: 1rem;
+      color: #ccc;
+      margin-bottom: 1rem;
+    }
+
+    /* Short introduction style */
+    .intro {
+      margin-bottom: 2rem;
+      text-align: center;
+      font-size: 1.1rem;
+      color: #ccc;
+    }
+
+    /* ===============================
+       PROGRESS BAR (fixed at top)
+       =============================== */
+    .progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: var(--secondary-bg);
+      height: 8px;
+      z-index: 999;
+    }
+    .progress-bar {
+      height: 8px;
+      background: var(--accent-color);
+      width: 0%; /* Dynamically updated via JS */
+      transition: width 0.2s ease-in-out;
+    }
+
+    /* ===============================
+       CHECKLIST AREA LAYOUT
+       =============================== */
+    .area-section {
+      margin-bottom: 2.5rem;
+      background-color: var(--secondary-bg);
+      padding: 1rem;
+      border-radius: 5px;
+    }
+    .area-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .area-title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+    }
+    .ai-note {
+      margin-left: 1rem;
+      background: linear-gradient(45deg, var(--ai-purple-start), var(--ai-purple-end));
+      border-radius: 4px;
+      padding: 0.2rem 0.5rem;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    .ai-note span {
+      margin-right: 0.3rem;
+    }
+    .ai-info-box {
+      display: none;
+      position: absolute;
+      top: 30px;
+      left: 0;
+      background-color: #222;
+      padding: 1rem;
+      border-radius: 5px;
+      width: 300px;
+      max-width: 90vw;
+      font-size: 0.85rem;
+      z-index: 9999;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .ai-info-box p {
+      margin: 0.5rem 0;
+      color: #ccc;
+    }
+    .ai-info-box .close-ai-info {
+      cursor: pointer;
+      color: var(--danger-color);
+      font-weight: bold;
+      float: right;
+    }
+
+    /* 
+      Standard vs. Deep Cleaning 
+      Toggling button 
+    */
+    .visit-toggle {
+      background-color: var(--accent-color);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--primary-text);
+      font-weight: bold;
+    }
+    .visit-toggle:hover {
+      opacity: 0.8;
+    }
+
+    /* 
+      TABLE / TASK ITEMS 
+      We'll display tasks in a table-like structure 
+      but can use divs for easier responsive design.
+    */
+    .tasks-container {
+      margin-top: 1rem;
+    }
+    .task-row {
+      display: flex;
+      flex-direction: column;
+      background-color: #444;
+      margin-bottom: 1rem;
+      border-radius: 4px;
+      padding: 1rem;
+    }
+    .task-row h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    .task-remarks {
+      margin-top: 0.5rem;
+    }
+    .task-remarks textarea {
+      width: 100%;
+      min-height: 50px;
+      border: 1px solid #666;
+      border-radius: 4px;
+      background-color: #333;
+      color: var(--primary-text);
+      padding: 0.5rem;
+      resize: vertical;
+      font-size: 0.9rem;
+    }
+
+    /* 
+      'Mark Done' checkbox button styling 
+      (the user wants a big button covering the entire row).
+      We'll do the entire .task-row as a clickable button effect,
+      but also separate out the text. 
+    */
+    .mark-done-btn {
+      display: inline-block;
+      background-color: var(--wood-brown);
+      color: var(--primary-text);
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+      font-weight: bold;
+    }
+    .mark-done-btn.pressed {
+      background-color: var(--success-color);
+    }
+
+    /* 
+      Photo upload section 
+      (one per area)
+    */
+    .photo-upload-container {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .upload-btn {
+      width: 100%;
+      background-color: var(--accent-color);
+      color: var(--primary-text);
+      border: none;
+      padding: 1rem;
+      font-size: 1.1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      font-weight: bold;
+      /* Pulsing animation */
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(250,128,114, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 20px rgba(250,128,114, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(250,128,114, 0);
+      }
+    }
+    .remove-photo-btn {
+      background-color: var(--danger-color);
+      color: var(--primary-text);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .remove-photo-btn:hover {
+      opacity: 0.8;
+    }
+    .file-info {
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      color: #ccc;
+    }
+    /* Hide the actual file input for styling */
+    .photo-input {
+      display: none;
+    }
+
+    /* ===============================
+       RECOMMENDATIONS & AVOID 
+       (1 each visible, + expand)
+       =============================== */
+    .recommendations-section {
+      background-color: #555;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      position: relative;
+    }
+    .recommendation-item, .avoid-item {
+      width: 45%;
+    }
+    .recommendation-item h4, .avoid-item h4 {
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+      color: var(--accent-color);
+    }
+    .expand-plus {
+      position: absolute;
+      bottom: 1rem;
+      right: 1rem;
+      background-color: var(--accent-color);
+      color: var(--primary-text);
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1.2rem;
+      text-align: center;
+      line-height: 32px;
+      animation: pulse 2s infinite;
+    }
+
+    /* Full box that appears with 5 tips */
+    .full-tips-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0,0,0,0.8);
+      z-index: 99999;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+    .full-tips-content {
+      background-color: #222;
+      max-width: 600px;
+      width: 90%;
+      padding: 1rem;
+      border-radius: 8px;
+      color: #ccc;
+      position: relative;
+    }
+    .full-tips-content h3 {
+      margin-top: 0;
+      color: var(--accent-color);
+    }
+    .tips-list-container {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .tips-list {
+      width: 48%;
+    }
+    .tips-list h4 {
+      color: var(--accent-color);
+      margin-bottom: 0.5rem;
+    }
+    .tips-list li {
+      margin-bottom: 0.3rem;
+    }
+    .close-tips-btn {
+      position: absolute;
+      bottom: 1rem;
+      right: 1rem;
+      background-color: var(--danger-color);
+      border: none;
+      color: var(--primary-text);
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+
+    /* ===============================
+       FOOTER & HELP (FAQ)
+       =============================== */
+    footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #bbb;
+    }
+    .brand-details {
+      margin-top: 1rem;
+    }
+    /* Help button in the bottom right */
+    .help-button {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: var(--accent-color);
+      color: var(--primary-text);
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-size: 1rem;
+      z-index: 999;
+      font-weight: bold;
+    }
+    .faq-overlay {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0,0,0,0.9);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .faq-content {
+      background-color: #222;
+      max-width: 800px;
+      width: 90%;
+      padding: 1rem;
+      border-radius: 8px;
+      color: #ccc;
+      position: relative;
+    }
+    .faq-content h2 {
+      margin-top: 0;
+      color: var(--accent-color);
+    }
+    .faq-content h3 {
+      margin-bottom: 0.5rem;
+      color: var(--accent-color);
+    }
+    .faq-content p {
+      margin-bottom: 1rem;
+      text-align: justify;
+    }
+    .close-faq-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background-color: var(--danger-color);
+      border: none;
+      color: var(--primary-text);
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+
+    /* ===============================
+       SUBMIT & RESET BUTTONS
+       =============================== */
+    .form-buttons {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin: 2rem 0 1rem 0;
+    }
+    .submit-btn {
+      background-color: var(--success-color);
+      color: var(--primary-text);
+      border: none;
+      padding: 1rem 1.5rem;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .reset-btn {
+      background-color: var(--danger-color);
+      color: var(--primary-text);
+      border: none;
+      padding: 1rem 1.5rem;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .submit-btn:hover, .reset-btn:hover {
+      opacity: 0.8;
+    }
+
+    /* 
+      Responsive styles
+    */
+    @media (max-width: 600px) {
+      .area-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .recommendations-section {
+        flex-direction: column;
+      }
+      .recommendation-item, .avoid-item {
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+      .expand-plus {
+        bottom: 0.5rem;
+        right: 0.5rem;
+      }
+      .full-tips-content {
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Progress Bar (fixed at top) -->
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="container">
+    <!-- HEADER / BRANDING -->
+    <header>
+      <h1>ECC</h1>
+      <p class="tagline">Creating incredible eastern-inspired restaurants with skill and craft.</p>
+    </header>
+
+    <!-- INTRO TEXT -->
+    <div class="intro">
+      <p><strong>Ai powered Cleaning Checklist</strong> for our Restaurant facility.</p>
+    </div>
+
+    <!--
+      FORM START
+      Using method="POST" and enctype="multipart/form-data"
+      action is your Formspree link (change if needed)
+    -->
+    <form 
+      id="cleaningForm" 
+      method="POST" 
+      enctype="multipart/form-data" 
+      action="https://formspree.io/f/xeoovlzy"
+    >
+      <!-- 
+        We’ll have 3 areas for a Restaurant: 
+        1) Dining Area
+        2) Kitchen
+        3) Toilets
+      -->
+
+      <!-- ===================== DINING AREA ===================== -->
+      <div class="area-section" id="diningAreaSection">
+        <div class="area-header">
+          <div class="area-title">
+            Dining Area
+            <div class="ai-note" onclick="toggleAiInfo(this)">
+              <span>Ai</span>
+              <span>(?)</span>
+              <!-- Hidden info box -->
+              <div class="ai-info-box">
+                <span class="close-ai-info" onclick="toggleAiInfo(this)">x</span>
+                <p>
+                  “Our smart lists, will factor in your previous submission, 
+                  look at when the last clean was done, what was done and 
+                  adjust to what is needed this time based on the frequency. 
+                  Also, for certain plans our system will analyse photos 
+                  uploaded and make suggestions for the next visit. 
+                  This feature might require a subscription.”
+                </p>
+                <p style="font-size:0.8rem; color:#888;">
+                  *Close this box by clicking the ‘x’ above.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Button to toggle Standard / Deep tasks -->
+          <button type="button" class="visit-toggle" 
+            onclick="toggleVisitType('dining')"
+            id="diningToggleBtn"
+          >
+            Switch to Deep Cleaning
+          </button>
+        </div>
+
+        <!-- TASKS (standard vs. deep) -->
+        <div class="tasks-container">
+          <!-- Standard tasks for Dining Area -->
+          <div id="diningStandardTasks">
+            <!-- 1 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Clear and Wipe Tables</h3>
+              <div class="task-remarks">
+                <label for="diningStandardTask1Remarks">Remarks:</label>
+                <textarea name="diningStandardTask1Remarks" id="diningStandardTask1Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 2 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Sweep or Vacuum Floors</h3>
+              <div class="task-remarks">
+                <label for="diningStandardTask2Remarks">Remarks:</label>
+                <textarea name="diningStandardTask2Remarks" id="diningStandardTask2Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 3 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Mop Floors</h3>
+              <div class="task-remarks">
+                <label for="diningStandardTask3Remarks">Remarks:</label>
+                <textarea name="diningStandardTask3Remarks" id="diningStandardTask3Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 4 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Clean Surfaces & Counters</h3>
+              <div class="task-remarks">
+                <label for="diningStandardTask4Remarks">Remarks:</label>
+                <textarea name="diningStandardTask4Remarks" id="diningStandardTask4Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 5 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Empty Trash Bins</h3>
+              <div class="task-remarks">
+                <label for="diningStandardTask5Remarks">Remarks:</label>
+                <textarea name="diningStandardTask5Remarks" id="diningStandardTask5Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 6 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Wipe Chairs and Seatings</h3>
+              <div class="task-remarks">
+                <label for="diningStandardTask6Remarks">Remarks:</label>
+                <textarea name="diningStandardTask6Remarks" id="diningStandardTask6Remarks"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deep tasks for Dining Area -->
+          <div id="diningDeepTasks" style="display:none;">
+            <!-- 1 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Clean Windows & Glass Doors Thoroughly</h3>
+              <div class="task-remarks">
+                <label for="diningDeepTask1Remarks">Remarks:</label>
+                <textarea name="diningDeepTask1Remarks" id="diningDeepTask1Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 2 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Deep Clean Furniture Upholstery</h3>
+              <div class="task-remarks">
+                <label for="diningDeepTask2Remarks">Remarks:</label>
+                <textarea name="diningDeepTask2Remarks" id="diningDeepTask2Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 3 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Dust or Wipe Baseboards & Vents</h3>
+              <div class="task-remarks">
+                <label for="diningDeepTask3Remarks">Remarks:</label>
+                <textarea name="diningDeepTask3Remarks" id="diningDeepTask3Remarks"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PHOTO UPLOAD FOR DINING AREA -->
+        <div class="photo-upload-container">
+          <button type="button" class="upload-btn" id="diningUploadBtn" onclick="triggerPhotoUpload('diningAreaPhoto')">
+            Upload Photo
+          </button>
+          <input 
+            type="file" 
+            name="diningAreaPhoto" 
+            id="diningAreaPhoto" 
+            class="photo-input"
+            accept="image/*"
+            onchange="handleFileSelected(event, 'diningUploadBtn')"
+          />
+          <div class="file-info" id="diningFileInfo"></div>
+          <button type="button" class="remove-photo-btn" onclick="removePhoto('diningAreaPhoto','diningUploadBtn','diningFileInfo')">
+            Remove Photo
+          </button>
+        </div>
+
+        <!-- RECOMMENDATIONS & AVOID -->
+        <div class="recommendations-section">
+          <div class="recommendation-item">
+            <h4>Top Recommendation</h4>
+            <p>Keep surfaces dry to avoid slips.</p>
+          </div>
+          <div class="avoid-item">
+            <h4>Thing to Avoid</h4>
+            <p>Leaving trash bins full overnight.</p>
+          </div>
+          <button type="button" class="expand-plus" onclick="openFullTips('diningFullTips')">+</button>
+        </div>
+      </div>
+
+      <!-- FULL TIPS OVERLAY FOR DINING AREA -->
+      <div class="full-tips-overlay" id="diningFullTips">
+        <div class="full-tips-content">
+          <h3>Additional Tips for Dining Area</h3>
+          <div class="tips-list-container">
+            <ul class="tips-list">
+              <h4>Recommendations</h4>
+              <li>Immediately clean up spills to prevent stains.</li>
+              <li>Use microfiber cloths for streak-free wiping.</li>
+              <li>Check table corners for leftover items.</li>
+              <li>Rotate decorative items for thorough dusting.</li>
+              <li>Disinfect high-touch areas (door handles, etc.) regularly.</li>
+            </ul>
+            <ul class="tips-list">
+              <h4>Things to Avoid</h4>
+              <li>Using too much water on wooden surfaces.</li>
+              <li>Skipping daily trash removal.</li>
+              <li>Ignoring seat cushions or booth crevices.</li>
+              <li>Using harsh chemicals that might damage finishes.</li>
+              <li>Leaving floors wet without signage.</li>
+            </ul>
+          </div>
+          <button type="button" class="close-tips-btn" onclick="closeFullTips('diningFullTips')">x</button>
+        </div>
+      </div>
+      <!-- END DINING AREA -->
+
+      <!-- ===================== KITCHEN ===================== -->
+      <div class="area-section" id="kitchenSection">
+        <div class="area-header">
+          <div class="area-title">
+            Kitchen
+            <div class="ai-note" onclick="toggleAiInfo(this)">
+              <span>Ai</span>
+              <span>(?)</span>
+              <div class="ai-info-box">
+                <span class="close-ai-info" onclick="toggleAiInfo(this)">x</span>
+                <p>
+                  “Our smart lists, will factor in your previous submission, 
+                  look at when the last clean was done, what was done and 
+                  adjust to what is needed this time based on the frequency. 
+                  Also, for certain plans our system will analyse photos 
+                  uploaded and make suggestions for the next visit. 
+                  This feature might require a subscription.”
+                </p>
+                <p style="font-size:0.8rem; color:#888;">
+                  *Close this box by clicking the ‘x’ above.
+                </p>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="visit-toggle" 
+            onclick="toggleVisitType('kitchen')"
+            id="kitchenToggleBtn"
+          >
+            Switch to Deep Cleaning
+          </button>
+        </div>
+        <div class="tasks-container">
+          <!-- Standard tasks (Kitchen) -->
+          <div id="kitchenStandardTasks">
+            <!-- 1 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Clear Counters and Surfaces</h3>
+              <div class="task-remarks">
+                <label for="kitchenStandardTask1Remarks">Remarks:</label>
+                <textarea name="kitchenStandardTask1Remarks" id="kitchenStandardTask1Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 2 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Wash and Sanitize Dishes</h3>
+              <div class="task-remarks">
+                <label for="kitchenStandardTask2Remarks">Remarks:</label>
+                <textarea name="kitchenStandardTask2Remarks" id="kitchenStandardTask2Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 3 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Clean and Sanitize Sinks</h3>
+              <div class="task-remarks">
+                <label for="kitchenStandardTask3Remarks">Remarks:</label>
+                <textarea name="kitchenStandardTask3Remarks" id="kitchenStandardTask3Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 4 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Sweep or Vacuum Floors</h3>
+              <div class="task-remarks">
+                <label for="kitchenStandardTask4Remarks">Remarks:</label>
+                <textarea name="kitchenStandardTask4Remarks" id="kitchenStandardTask4Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 5 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Mop Floors</h3>
+              <div class="task-remarks">
+                <label for="kitchenStandardTask5Remarks">Remarks:</label>
+                <textarea name="kitchenStandardTask5Remarks" id="kitchenStandardTask5Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 6 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Wipe Down Appliance Exteriors</h3>
+              <div class="task-remarks">
+                <label for="kitchenStandardTask6Remarks">Remarks:</label>
+                <textarea name="kitchenStandardTask6Remarks" id="kitchenStandardTask6Remarks"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deep tasks (Kitchen) -->
+          <div id="kitchenDeepTasks" style="display:none;">
+            <!-- 1 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Thoroughly Degrease Hood and Vents</h3>
+              <div class="task-remarks">
+                <label for="kitchenDeepTask1Remarks">Remarks:</label>
+                <textarea name="kitchenDeepTask1Remarks" id="kitchenDeepTask1Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 2 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Clean Inside of Appliances (Oven, Microwave)</h3>
+              <div class="task-remarks">
+                <label for="kitchenDeepTask2Remarks">Remarks:</label>
+                <textarea name="kitchenDeepTask2Remarks" id="kitchenDeepTask2Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 3 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Sanitize All Storage Areas</h3>
+              <div class="task-remarks">
+                <label for="kitchenDeepTask3Remarks">Remarks:</label>
+                <textarea name="kitchenDeepTask3Remarks" id="kitchenDeepTask3Remarks"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PHOTO UPLOAD FOR KITCHEN -->
+        <div class="photo-upload-container">
+          <button type="button" class="upload-btn" id="kitchenUploadBtn" onclick="triggerPhotoUpload('kitchenAreaPhoto')">
+            Upload Photo
+          </button>
+          <input 
+            type="file" 
+            name="kitchenAreaPhoto" 
+            id="kitchenAreaPhoto" 
+            class="photo-input"
+            accept="image/*"
+            onchange="handleFileSelected(event, 'kitchenUploadBtn')"
+          />
+          <div class="file-info" id="kitchenFileInfo"></div>
+          <button type="button" class="remove-photo-btn" onclick="removePhoto('kitchenAreaPhoto','kitchenUploadBtn','kitchenFileInfo')">
+            Remove Photo
+          </button>
+        </div>
+
+        <!-- RECOMMENDATIONS & AVOID -->
+        <div class="recommendations-section">
+          <div class="recommendation-item">
+            <h4>Top Recommendation</h4>
+            <p>Use food-safe cleaning solutions on surfaces.</p>
+          </div>
+          <div class="avoid-item">
+            <h4>Thing to Avoid</h4>
+            <p>Leaving food debris overnight.</p>
+          </div>
+          <button type="button" class="expand-plus" onclick="openFullTips('kitchenFullTips')">+</button>
+        </div>
+      </div>
+
+      <!-- FULL TIPS OVERLAY FOR KITCHEN -->
+      <div class="full-tips-overlay" id="kitchenFullTips">
+        <div class="full-tips-content">
+          <h3>Additional Tips for Kitchen</h3>
+          <div class="tips-list-container">
+            <ul class="tips-list">
+              <h4>Recommendations</h4>
+              <li>Label and date all food containers.</li>
+              <li>Regularly check fridge temperatures.</li>
+              <li>Clean under large appliances monthly.</li>
+              <li>Sterilize cutting boards frequently.</li>
+              <li>Use color-coded cloths for different tasks.</li>
+            </ul>
+            <ul class="tips-list">
+              <h4>Things to Avoid</h4>
+              <li>Using harsh chemicals near open food.</li>
+              <li>Neglecting hard-to-reach corners.</li>
+              <li>Overlooking filters in extraction fans.</li>
+              <li>Allowing grease to build up on surfaces.</li>
+              <li>Storing cleaning agents near food supplies.</li>
+            </ul>
+          </div>
+          <button type="button" class="close-tips-btn" onclick="closeFullTips('kitchenFullTips')">x</button>
+        </div>
+      </div>
+      <!-- END KITCHEN -->
+
+      <!-- ===================== TOILETS ===================== -->
+      <div class="area-section" id="toiletsSection">
+        <div class="area-header">
+          <div class="area-title">
+            Toilets
+            <div class="ai-note" onclick="toggleAiInfo(this)">
+              <span>Ai</span>
+              <span>(?)</span>
+              <div class="ai-info-box">
+                <span class="close-ai-info" onclick="toggleAiInfo(this)">x</span>
+                <p>
+                  “Our smart lists, will factor in your previous submission, 
+                  look at when the last clean was done, what was done and 
+                  adjust to what is needed this time based on the frequency. 
+                  Also, for certain plans our system will analyse photos 
+                  uploaded and make suggestions for the next visit. 
+                  This feature might require a subscription.”
+                </p>
+                <p style="font-size:0.8rem; color:#888;">
+                  *Close this box by clicking the ‘x’ above.
+                </p>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="visit-toggle" 
+            onclick="toggleVisitType('toilets')"
+            id="toiletsToggleBtn"
+          >
+            Switch to Deep Cleaning
+          </button>
+        </div>
+        <div class="tasks-container">
+          <!-- Standard tasks (Toilets) -->
+          <div id="toiletsStandardTasks">
+            <!-- 1 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Clean and Disinfect Toilet Bowls</h3>
+              <div class="task-remarks">
+                <label for="toiletsStandardTask1Remarks">Remarks:</label>
+                <textarea name="toiletsStandardTask1Remarks" id="toiletsStandardTask1Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 2 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Wipe and Sanitize Counters</h3>
+              <div class="task-remarks">
+                <label for="toiletsStandardTask2Remarks">Remarks:</label>
+                <textarea name="toiletsStandardTask2Remarks" id="toiletsStandardTask2Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 3 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Clean Mirrors</h3>
+              <div class="task-remarks">
+                <label for="toiletsStandardTask3Remarks">Remarks:</label>
+                <textarea name="toiletsStandardTask3Remarks" id="toiletsStandardTask3Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 4 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Refill Soap and Paper Products</h3>
+              <div class="task-remarks">
+                <label for="toiletsStandardTask4Remarks">Remarks:</label>
+                <textarea name="toiletsStandardTask4Remarks" id="toiletsStandardTask4Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 5 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Mop Floors</h3>
+              <div class="task-remarks">
+                <label for="toiletsStandardTask5Remarks">Remarks:</label>
+                <textarea name="toiletsStandardTask5Remarks" id="toiletsStandardTask5Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 6 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Empty Trash Bins</h3>
+              <div class="task-remarks">
+                <label for="toiletsStandardTask6Remarks">Remarks:</label>
+                <textarea name="toiletsStandardTask6Remarks" id="toiletsStandardTask6Remarks"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deep tasks (Toilets) -->
+          <div id="toiletsDeepTasks" style="display:none;">
+            <!-- 1 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Descale Faucets and Showerheads</h3>
+              <div class="task-remarks">
+                <label for="toiletsDeepTask1Remarks">Remarks:</label>
+                <textarea name="toiletsDeepTask1Remarks" id="toiletsDeepTask1Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 2 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Scrub Grout Lines Thoroughly</h3>
+              <div class="task-remarks">
+                <label for="toiletsDeepTask2Remarks">Remarks:</label>
+                <textarea name="toiletsDeepTask2Remarks" id="toiletsDeepTask2Remarks"></textarea>
+              </div>
+            </div>
+            <!-- 3 -->
+            <div class="task-row">
+              <button type="button" class="mark-done-btn" onclick="markTaskDone(this)">Mark Done</button>
+              <h3>Deep Sanitize Drains</h3>
+              <div class="task-remarks">
+                <label for="toiletsDeepTask3Remarks">Remarks:</label>
+                <textarea name="toiletsDeepTask3Remarks" id="toiletsDeepTask3Remarks"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PHOTO UPLOAD FOR TOILETS -->
+        <div class="photo-upload-container">
+          <button type="button" class="upload-btn" id="toiletsUploadBtn" onclick="triggerPhotoUpload('toiletsAreaPhoto')">
+            Upload Photo
+          </button>
+          <input 
+            type="file" 
+            name="toiletsAreaPhoto" 
+            id="toiletsAreaPhoto" 
+            class="photo-input"
+            accept="image/*"
+            onchange="handleFileSelected(event, 'toiletsUploadBtn')"
+          />
+          <div class="file-info" id="toiletsFileInfo"></div>
+          <button type="button" class="remove-photo-btn" onclick="removePhoto('toiletsAreaPhoto','toiletsUploadBtn','toiletsFileInfo')">
+            Remove Photo
+          </button>
+        </div>
+
+        <!-- RECOMMENDATIONS & AVOID -->
+        <div class="recommendations-section">
+          <div class="recommendation-item">
+            <h4>Top Recommendation</h4>
+            <p>Regularly disinfect high-touch surfaces.</p>
+          </div>
+          <div class="avoid-item">
+            <h4>Thing to Avoid</h4>
+            <p>Using the same cloth for multiple surfaces.</p>
+          </div>
+          <button type="button" class="expand-plus" onclick="openFullTips('toiletsFullTips')">+</button>
+        </div>
+      </div>
+
+      <!-- FULL TIPS OVERLAY FOR TOILETS -->
+      <div class="full-tips-overlay" id="toiletsFullTips">
+        <div class="full-tips-content">
+          <h3>Additional Tips for Toilets</h3>
+          <div class="tips-list-container">
+            <ul class="tips-list">
+              <h4>Recommendations</h4>
+              <li>Keep a separate mop for restroom floors.</li>
+              <li>Use disinfectants that target common restroom bacteria.</li>
+              <li>Check for leaks in plumbing regularly.</li>
+              <li>Always stock air fresheners if possible.</li>
+              <li>Wipe door handles and locks after each cleaning session.</li>
+            </ul>
+            <ul class="tips-list">
+              <h4>Things to Avoid</h4>
+              <li>Mixing cleaning chemicals (dangerous fumes).</li>
+              <li>Overlooking ventilation fans.</li>
+              <li>Ignoring the underside of toilet seats.</li>
+              <li>Using abrasive pads that scratch surfaces.</li>
+              <li>Leaving a wet floor without a caution sign.</li>
+            </ul>
+          </div>
+          <button type="button" class="close-tips-btn" onclick="closeFullTips('toiletsFullTips')">x</button>
+        </div>
+      </div>
+      <!-- END TOILETS -->
+
+      <!-- =====================
+           FREE TIER DISCLAIMER
+           ===================== -->
+      <div style="margin-top:2rem; font-size:0.9rem; color:#bbb;">
+        <p><strong>Disclaimer (Free Tier):</strong> 
+          You are allowed 50 submissions per month and <strong>no photos</strong>. 
+          If you attempt to upload photos or have exceeded 50 submissions, 
+          you will be redirected to our subscription page. 
+          <a href="https://sprucesaustralia.github.io/subscribepage/index.html" 
+             style="color: var(--accent-color); text-decoration: underline;">
+            Subscribe here
+          </a> 
+          to upgrade.
+        </p>
+      </div>
+
+      <!-- FORM BUTTONS -->
+      <div class="form-buttons">
+        <button type="submit" class="submit-btn">
+          <span>&#10003;</span> Submit Checklist
+        </button>
+        <button type="button" class="reset-btn" onclick="resetChecklist()">
+          <span>&#10007;</span> Reset Checklist
+        </button>
+      </div>
+    </form>
+
+    <!-- FOOTER INFO -->
+    <footer>
+      <div class="brand-details">
+        &copy; 2025 Eastern Culinary Collective. <br/>
+        We manage some of Brisbane’s best reviewed East Asian restaurants.
+      </div>
+    </footer>
+  </div><!-- end container -->
+
+  <!-- HELP (FAQ) BUTTON & OVERLAY -->
+  <button class="help-button" onclick="openFAQ()">Help?</button>
+  <div class="faq-overlay" id="faqOverlay">
+    <div class="faq-content">
+      <button class="close-faq-btn" onclick="closeFAQ()">X</button>
+      <h2>Frequently Asked Questions (FAQ)</h2>
+      <h3>1. What happens after I submit the checklist?</h3>
+      <p>
+        After you fill in and submit the checklist, a copy of the completed report 
+        is sent to the designated email address you provided. You’ll see all your 
+        selected tasks marked as done (or pending) along with any comments you added. 
+        This helps you maintain a clear record of your cleaning activities for 
+        reference or auditing.
+      </p>
+      <h3>2. How do I reset the checklist?</h3>
+      <p>
+        At the bottom of the checklist page, there is a Reset Checklist button 
+        (marked with an “X” symbol). Clicking this button clears all marked tasks, 
+        comments, and any uploaded photos. It instantly brings the checklist back 
+        to its original blank state, so you can start fresh for your next cleaning 
+        session.
+      </p>
+      <h3>3. How can I switch between Standard and Deep Cleaning tasks?</h3>
+      <p>
+        Each area (e.g., “Kitchen,” “Offices,” “Dining Area,” etc.) has a toggle 
+        button at the top. When you click it, you’ll switch from Standard cleaning 
+        tasks to Deep cleaning tasks (and vice versa). The button text updates 
+        accordingly—so if you’re viewing Standard tasks, it’ll say “Switch to Deep 
+        Cleaning,” and if you’re viewing Deep tasks, it’ll say “Switch to Standard 
+        Cleaning.”
+      </p>
+      <h3>4. Can I upload photos, and how does that work?</h3>
+      <p>
+        Yes. Each area has a large, pulsing Upload Photo button that is the full 
+        width of the form to draw your attention. When clicked:
+        <ul>
+          <li>On a phone, it typically opens your camera by default (though this depends on your device settings).</li>
+          <li>On a desktop, it opens a file selection dialog.</li>
+        </ul>
+        If you successfully select or snap a photo, the button text changes to say 
+        “Photo Ready for Analysis,” and you’ll see the file name appear below. If you 
+        decide you no longer want to send the photo, there’s a Remove Photo button 
+        which clears it.
+        <br/><br/>
+        <strong>Note:</strong> If you’re using the free tier, uploading photos is not 
+        allowed. Any uploaded photo will cause the form to redirect you to the 
+        subscription page instead of submitting.
+      </p>
+      <h3>5. What if I have tasks that are different or need to be removed for a while?</h3>
+      <p>
+        Our system’s “smart list” approach is designed to adapt based on your 
+        previous submissions:
+        <ul>
+          <li>Standard tasks that are marked as done might be hidden for 24 hours (in more advanced setups).</li>
+          <li>Deep tasks might not show again for 14 days if marked done previously.</li>
+        </ul>
+        This means that tasks you’ve recently completed may not reappear until enough 
+        time has passed. If you have a unique scenario or need a custom task interval, 
+        please contact us to discuss your subscription options.
+      </p>
+      <h3>6. I’m on the free tier. How many submissions can I make?</h3>
+      <p>
+        Under the free tier, you’re allowed 50 submissions per month. If you exceed 
+        that limit, the form automatically redirects you to our subscription page. 
+        Also, photo uploads are disabled under the free tier.
+      </p>
+      <h3>7. What if I exceed my free tier limit or need photo analysis?</h3>
+      <p>
+        Once you reach 50 submissions in a month—or if you try to upload photos while 
+        on the free plan—you’ll be redirected to our subscription page, where you can 
+        upgrade and enjoy additional features, including photo-based AI suggestions.
+      </p>
+      <h3>8. How do I add comments or notes for each task?</h3>
+      <p>
+        Below each task’s “Mark Done” button, there’s a Remarks box (textarea). You 
+        can type in any observations, additional cleaning steps, or special notes. 
+        These comments appear in the final report email and help keep track of 
+        important details.
+      </p>
+      <h3>9. Where do I find the progress bar, and how does it work?</h3>
+      <p>
+        You’ll see a progress bar fixed at the top of your screen. As you mark tasks 
+        “Done,” it automatically updates, showing how much of your checklist is 
+        completed. This visual feedback helps motivate your team to finish all tasks.
+      </p>
+      <h3>10. Who can I contact if I have more questions?</h3>
+      <p>
+        If you have any questions, concerns, or would like more information about 
+        customizing or upgrading your checklist, you can email us at:
+        <strong> hi@spruces.co</strong>
+        <br/>
+        We’re here to ensure you have the best possible experience using our 
+        AI-powered cleaning solution!
+      </p>
+    </div>
+  </div>
+
+  <!-- ===============================
+       JAVASCRIPT
+       =============================== -->
+  <script>
+    /*
+      --------------------------------------------------
+      1) Toggle AI Info Box
+      --------------------------------------------------
+    */
+    function toggleAiInfo(el) {
+      // 'el' could be the .ai-note or the close button
+      // Find the parent with the .ai-note class 
+      // or the .ai-info-box inside it.
+      let noteParent = el;
+      while (!noteParent.classList.contains('ai-note') && !noteParent.classList.contains('ai-info-box')) {
+        noteParent = noteParent.parentElement;
+        if (!noteParent) return;
+      }
+      // If we found the .ai-note, we want its .ai-info-box child
+      // If we found the .ai-info-box, we close it
+      if (noteParent.classList.contains('ai-note')) {
+        const infoBox = noteParent.querySelector('.ai-info-box');
+        if (infoBox) {
+          infoBox.style.display = (infoBox.style.display === 'block') ? 'none' : 'block';
+        }
+      } else if (noteParent.classList.contains('ai-info-box')) {
+        // It's the box itself
+        noteParent.style.display = 'none';
+      }
+    }
+
+    /*
+      --------------------------------------------------
+      2) Toggle Standard / Deep Cleaning
+         Each area has a separate function
+      --------------------------------------------------
+    */
+    function toggleVisitType(area) {
+      // area: 'dining', 'kitchen', or 'toilets'
+      const standardId = area + 'StandardTasks';
+      const deepId = area + 'DeepTasks';
+      const toggleBtnId = area + 'ToggleBtn';
+
+      let standardEl = document.getElementById(standardId);
+      let deepEl = document.getElementById(deepId);
+      let toggleBtn = document.getElementById(toggleBtnId);
+
+      if (standardEl.style.display === 'none') {
+        // Currently showing deep, so show standard
+        standardEl.style.display = 'block';
+        deepEl.style.display = 'none';
+        toggleBtn.innerText = 'Switch to Deep Cleaning';
+      } else {
+        // Currently showing standard, so show deep
+        standardEl.style.display = 'none';
+        deepEl.style.display = 'block';
+        toggleBtn.innerText = 'Switch to Standard Cleaning';
+      }
+      updateProgressBar();
+    }
+
+    /*
+      --------------------------------------------------
+      3) Mark Task Done Button
+         We'll visually toggle "pressed" 
+         and count as done for progress bar
+      --------------------------------------------------
+    */
+    function markTaskDone(btn) {
+      btn.classList.toggle('pressed');
+      // We can also set a hidden checkbox input or 
+      // use some hidden field if needed. For now, 
+      // the presence of 'pressed' can indicate it's done.
+      updateProgressBar();
+    }
+
+    /*
+      --------------------------------------------------
+      4) Photo Upload: 
+         - We have one upload per area.
+         - If a photo is selected and user is on free tier,
+           we must redirect to subscription page.
+      --------------------------------------------------
+    */
+    function triggerPhotoUpload(inputId) {
+      // Trigger the hidden file input
+      const fileInput = document.getElementById(inputId);
+      if (fileInput) fileInput.click();
+    }
+
+    function handleFileSelected(event, buttonId) {
+      const fileInput = event.target;
+      const file = fileInput.files[0];
+      const button = document.getElementById(buttonId);
+      const infoDiv = document.getElementById(buttonId.replace('UploadBtn','FileInfo'));
+      if (file) {
+        button.textContent = "Photo Ready for Analysis";
+        infoDiv.textContent = "Selected: " + file.name;
+      } else {
+        button.textContent = "Upload Photo";
+        infoDiv.textContent = "";
+      }
+    }
+
+    function removePhoto(inputId, buttonId, infoId) {
+      const fileInput = document.getElementById(inputId);
+      const button = document.getElementById(buttonId);
+      const infoDiv = document.getElementById(infoId);
+      if (fileInput) {
+        fileInput.value = ""; // Clear file
+      }
+      button.textContent = "Upload Photo";
+      infoDiv.textContent = "";
+    }
+
+    /*
+      --------------------------------------------------
+      5) Recommendations & Things to Avoid 
+         Expand/Collapse 
+      --------------------------------------------------
+    */
+    function openFullTips(overlayId) {
+      document.getElementById(overlayId).style.display = "flex";
+    }
+    function closeFullTips(overlayId) {
+      document.getElementById(overlayId).style.display = "none";
+    }
+
+    /*
+      --------------------------------------------------
+      6) Help (FAQ) Expand/Collapse
+      --------------------------------------------------
+    */
+    function openFAQ() {
+      document.getElementById('faqOverlay').style.display = 'flex';
+    }
+    function closeFAQ() {
+      document.getElementById('faqOverlay').style.display = 'none';
+    }
+
+    /*
+      --------------------------------------------------
+      7) Progress Bar Logic
+         We'll count the tasks that are visible and 
+         how many are pressed.
+      --------------------------------------------------
+    */
+    function updateProgressBar() {
+      // Count all .task-row that is visible
+      // Then count how many have .pressed
+      const allTaskRows = document.querySelectorAll('.tasks-container .task-row');
+      let visibleTasks = 0;
+      let doneTasks = 0;
+
+      allTaskRows.forEach(task => {
+        // Check if the parent container is displayed
+        // If display is not 'none' for that area, we count it
+        if (isElementVisible(task)) {
+          visibleTasks++;
+          const btn = task.querySelector('.mark-done-btn');
+          if (btn && btn.classList.contains('pressed')) {
+            doneTasks++;
+          }
+        }
+      });
+
+      let percentage = 0;
+      if (visibleTasks > 0) {
+        percentage = (doneTasks / visibleTasks) * 100;
+      }
+
+      const progressBar = document.getElementById('progressBar');
+      progressBar.style.width = percentage.toFixed(0) + '%';
+    }
+
+    // Helper function to check if an element or one of its ancestors is display:none
+    function isElementVisible(el) {
+      if (!el) return false;
+      if (window.getComputedStyle(el).display === 'none') return false;
+      if (el.parentElement) {
+        return isElementVisible(el.parentElement);
+      }
+      return true;
+    }
+
+    /*
+      --------------------------------------------------
+      8) Reset Checklist
+      --------------------------------------------------
+    */
+    function resetChecklist() {
+      // Remove .pressed from all mark-done-btn
+      const allButtons = document.querySelectorAll('.mark-done-btn');
+      allButtons.forEach(btn => {
+        btn.classList.remove('pressed');
+      });
+
+      // Clear all textareas
+      const allTextareas = document.querySelectorAll('textarea');
+      allTextareas.forEach(ta => {
+        ta.value = '';
+      });
+
+      // Clear all file inputs
+      const allFileInputs = document.querySelectorAll('.photo-input');
+      allFileInputs.forEach(fi => {
+        fi.value = '';
+      });
+
+      // Reset Upload Photo button text and file info
+      const allUploadBtns = document.querySelectorAll('.upload-btn');
+      allUploadBtns.forEach(b => b.textContent = "Upload Photo");
+      const allFileInfo = document.querySelectorAll('.file-info');
+      allFileInfo.forEach(div => div.textContent = "");
+
+      // Hide deep tasks if needed and show standard
+      // We'll just set them all to standard for simplicity
+      document.getElementById('diningStandardTasks').style.display = 'block';
+      document.getElementById('diningDeepTasks').style.display = 'none';
+      document.getElementById('diningToggleBtn').innerText = 'Switch to Deep Cleaning';
+
+      document.getElementById('kitchenStandardTasks').style.display = 'block';
+      document.getElementById('kitchenDeepTasks').style.display = 'none';
+      document.getElementById('kitchenToggleBtn').innerText = 'Switch to Deep Cleaning';
+
+      document.getElementById('toiletsStandardTasks').style.display = 'block';
+      document.getElementById('toiletsDeepTasks').style.display = 'none';
+      document.getElementById('toiletsToggleBtn').innerText = 'Switch to Deep Cleaning';
+
+      // Update progress
+      updateProgressBar();
+    }
+
+    /*
+      --------------------------------------------------
+      9) Submission Logic
+         We must:
+         - Check if user has uploaded any photos 
+           => if yes, redirect to subscription page.
+         - Check if user has 50 or more submissions 
+           => redirect to subscription page.
+         - Else, allow form submission to Formspree.
+         NOTE: 
+         Actual submission counts from Formspree typically
+         require an API key, so this is partial demonstration.
+      --------------------------------------------------
+    */
+    const cleaningForm = document.getElementById('cleaningForm');
+    cleaningForm.addEventListener('submit', function(evt) {
+      // 1) Check for any photo uploads
+      const photoInputs = document.querySelectorAll('.photo-input');
+      let photoFound = false;
+      photoInputs.forEach(pi => {
+        if (pi.files && pi.files.length > 0) {
+          photoFound = true;
+        }
+      });
+      // If any photo is found => redirect to subscription
+      if (photoFound) {
+        evt.preventDefault();
+        window.location.href = "https://sprucesaustralia.github.io/subscribepage/index.html";
+        return;
+      }
+
+      // 2) (Pseudo) check if we have 50+ submissions 
+      // We'll do a mock check. 
+      // In real usage, you might call Formspree's API or your own backend.
+      
+      // PSEUDO: Suppose we have a function getSubmissionCount that returns 
+      // the number of submissions. (We can’t reliably do it client-side 
+      // without an API token).
+      let mockSubmissionCount = 25; // Example placeholder
+      // If mockSubmissionCount >= 50 => redirect
+      if (mockSubmissionCount >= 50) {
+        evt.preventDefault();
+        window.location.href = "https://sprucesaustralia.github.io/subscribepage/index.html";
+        return;
+      }
+
+      // Otherwise, we allow form to submit to Formspree
+      // No further action needed
+    });
+
+    /*
+      Initialize progress bar on load
+    */
+    window.addEventListener('load', () => {
+      updateProgressBar();
+    });
+  </script>
+</body>
+</html>
